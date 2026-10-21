@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&family=Caveat:wght@600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#FCFCFA; --ink:#111110; --mut:#6E6D68; --faint:#9C9B94;
+    --bg:#FCFCFA; --ink:#111110; --mut:#6E6D68; --faint:#7A7972;
     --line:#E8E7E2; --soft:#F1F0EB; --accent:#111110; --magenta:#D6337F;
   }
   *{margin:0;padding:0;box-sizing:border-box}
@@ -188,7 +188,7 @@
   <p class="lead">Pulled straight from the public database, refreshed every hour. Epic giveaways are yours to keep if you claim inside the window.</p>
   <div class="pills" id="pills"></div>
   <div class="grid" id="grid"></div>
-  <p class="gamesfoot" id="gfoot"><a href="https://raw.githubusercontent.com/JocabimMugatu/free-game-alerts-db/main/catalog.json" target="_blank" rel="noopener">the live feed</a> is the truth</p>
+  <p class="gamesfoot" id="gfoot"><a href="https://raw.githubusercontent.com/JocabimMugatu/free-game-alerts-db/main/catalog.json" target="_blank" rel="noopener">live feed</a>, refreshed hourly</p>
 </section>
 
 <section id="how" class="wrap">
@@ -306,22 +306,23 @@ var first=document.querySelector(".a");first.style.maxHeight=first.scrollHeight+
 
 function hash(s){var h=0;for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))>>>0}return h}
 var TINTS=["#F2EEE6","#E8EDE4","#E5EBF2","#F3E7E5","#EFEDE7","#E9EEEC","#F0EAE2","#EAE8F0"];
-function srcLabel(it){return it.source==="epic"?"EPIC GAMES STORE":"STEAM"}
+function isEp(x){return (x.platform||"").toLowerCase().indexOf("epic")>-1}
+function srcLabel(it){return (it.platform||"").toUpperCase()}
 function fmtWhen(it){
-  if(it.status==="ACTIVE"&&it.ends)return "free until "+it.ends.slice(5).replace("-"," ");
-  if(it.status==="UPCOMING")return (it.starts?it.starts.slice(5).replace("-"," ")+" to ":"")+(it.ends?it.ends.slice(5).replace("-"," "):"");
-  return "listed "+(it.listed_at||"").slice(0,16).replace("T"," ");
+  if(it.status==="ACTIVE"&&it.free_until)return "free until "+it.free_until.slice(5).replace("-"," ");
+  if(it.status==="UPCOMING")return (it.free_from?it.free_from.slice(5).replace("-"," ")+" to ":"")+(it.free_until?it.free_until.slice(5).replace("-"," "):"");
+  return "listed "+(it.found_utc||"").slice(0,16);
 }
 function title(it){return (it.title||"").replace(/\s+/g," ").trim()}
 var items=[],curFilter="all";
 fetch(FEED).then(function(r){return r.json()}).then(function(d){
-  items=(d.items||[]).filter(function(it){
+  items=(d.games||[]).filter(function(it){
     var t=(it.title||"").toLowerCase();
     return it.status!=="EXPIRED"&&t.indexOf("weekly discussion thread")===-1;
   });
   document.getElementById("hdot").style.background="#1D9E55";
   var up=document.getElementById("gfoot");
-  up.innerHTML=(d.updated_utc?("updated "+d.updated_utc.slice(0,10)+" &middot; "):"")+'<a href="'+FEED+'" target="_blank" rel="noopener">the live feed</a> is the truth';
+  up.innerHTML=(d.updated_utc?("updated "+d.updated_utc.slice(0,10)+" &middot; "):"")+'<a href="'+FEED+'" target="_blank" rel="noopener">live feed</a>, refreshed hourly';
   buildTicker(items);buildGrid();
 }).catch(function(){buildGrid()});
 function buildTicker(list){
@@ -338,13 +339,11 @@ function badge(it){
   return '<span class="badge b-list">Listed</span>';
 }
 function tile(it,i,feat){
-  var t=title(it),epic=it.source==="epic";
+  var t=title(it),epic=isEp(it);
   var d=document.createElement("div");
   d.className="tile rv"+(feat?" feat":"");
   if(!feat&&!epic){d.style.background=TINTS[hash(t)%TINTS.length]}
   if(!feat&&epic){d.style.background="#F1F0EB"}
-  var link=it.link?(it.url||it.link):null;
-  if(link){var a=document.createElement("a");a.href=link;a.target="_blank";a.rel="noopener";a.style.textDecoration="none";a.style.color="inherit";d.appendChild(a);var inner=d.innerHTML;d.innerHTML="";a.innerHTML=inner}
   d.insertAdjacentHTML("beforeend",
     '<div class="t-top"><span class="src">'+srcLabel(it)+'</span>'+badge(it)+(feat&&!i?'<span class="sc">live now, go grab it</span>':"")+'</div>'+
     '<div><div class="t-title">'+esc(t)+'</div><div class="t-meta">'+fmtWhen(it)+'</div></div>');
@@ -352,7 +351,7 @@ function tile(it,i,feat){
 }
 function buildGrid(){
   var g=document.getElementById("grid");g.innerHTML="";
-  var shown=items.filter(function(it){return curFilter==="all"||(curFilter==="epic"&&it.source==="epic")||(curFilter==="steam"&&it.source!=="epic")||(curFilter==="keep"&&it.status==="ACTIVE")});
+  var shown=items.filter(function(it){return curFilter==="all"||(curFilter==="epic"&&isEp(it))||(curFilter==="steam"&&!isEp(it))||(curFilter==="keep"&&it.status==="ACTIVE")});
   var feat=shown.find(function(it){return it.status==="ACTIVE"})||shown[0];
   shown.slice(0,23).forEach(function(it,i){g.appendChild(tile(it,i===0&&feat&&it===feat&&curFilter!=="steam",i))});
   if(!shown.length){g.innerHTML='<p style="color:var(--faint);font-size:14px">Nothing on the feed right now. Check back within the hour.</p>'}
@@ -369,6 +368,8 @@ function observe(){
   document.querySelectorAll(".rv:not(.in)").forEach(function(el){io.observe(el)});
 }
 observe();
+setTimeout(function(){document.querySelectorAll(".rv:not(.in)").forEach(function(el){el.classList.add("in")})},1200);
+window.addEventListener("load",function(){var f=document.querySelector(".a");if(f)f.style.maxHeight=f.scrollHeight+"px"});
 </script>
 </body>
 </html>
