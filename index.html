@@ -307,7 +307,7 @@ var first=document.querySelector(".a");first.style.maxHeight=first.scrollHeight+
 function hash(s){var h=0;for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))>>>0}return h}
 var TINTS=["#F2EEE6","#E8EDE4","#E5EBF2","#F3E7E5","#EFEDE7","#E9EEEC","#F0EAE2","#EAE8F0"];
 function isEp(x){return (x.platform||"").toLowerCase().indexOf("epic")>-1}
-function srcLabel(it){return (it.platform||"").toUpperCase()}
+function srcLabel(it){return isEp(it)?"EPIC":"STEAM"}
 function fmtWhen(it){
   if(it.status==="ACTIVE"&&it.free_until)return "free until "+it.free_until.slice(5).replace("-"," ");
   if(it.status==="UPCOMING")return (it.free_from?it.free_from.slice(5).replace("-"," ")+" to ":"")+(it.free_until?it.free_until.slice(5).replace("-"," "):"");
@@ -353,7 +353,7 @@ function buildGrid(){
   var g=document.getElementById("grid");g.innerHTML="";
   var shown=items.filter(function(it){return curFilter==="all"||(curFilter==="epic"&&isEp(it))||(curFilter==="steam"&&!isEp(it))||(curFilter==="keep"&&it.status==="ACTIVE")});
   var feat=shown.find(function(it){return it.status==="ACTIVE"})||shown[0];
-  shown.slice(0,23).forEach(function(it,i){g.appendChild(tile(it,i===0&&feat&&it===feat&&curFilter!=="steam",i))});
+  shown.slice(0,23).forEach(function(it,i){g.appendChild(tile(it,i,i===0&&it===feat&&curFilter!=="steam"))});
   if(!shown.length){g.innerHTML='<p style="color:var(--faint);font-size:14px">Nothing on the feed right now. Check back within the hour.</p>'}
   observe();
 }
